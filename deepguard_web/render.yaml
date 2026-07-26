@@ -1,0 +1,22 @@
+# render.yaml — Render Blueprint for DeepGuard
+# Deploy with: https://render.com/deploy
+
+services:
+  - type: web
+    name: deepguard
+    runtime: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn deepguard_web.wsgi --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.10.12"

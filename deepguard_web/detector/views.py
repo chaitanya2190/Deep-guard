@@ -118,8 +118,7 @@ def result_detail_view(request, pk):
     heatmaps_b64 = json.loads(analysis.heatmaps_json) if analysis.heatmaps_json else []
     frame_data = list(zip(crops_b64, heatmaps_b64))
 
-    return render(request, 'detector/upload.html', {
-        'form': VideoUploadForm(),
+    return render(request, 'detector/result.html', {
         'result': analysis,
         'crops_b64': crops_b64,
         'heatmaps_b64': heatmaps_b64,

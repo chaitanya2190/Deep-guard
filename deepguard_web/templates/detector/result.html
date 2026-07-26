@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}DeepGuard — {{ result.filename }} Result{% endblock %}
+
+{% block content %}
+<!-- Result Header -->
+<section class="result-detail-header">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-xl);">
+        <div>
+            <a href="{% url 'detector:history' %}" style="color: var(--text-muted); text-decoration: none; font-size: 0.85rem; display: inline-flex; align-items: center; gap: var(--space-xs); transition: color 0.2s;" onmouseover="this.style.color='var(--accent-blue)'" onmouseout="this.style.color='var(--text-muted)'">
+                ← Back to History
+            </a>
+            <h1 style="font-size: 1.5rem; font-weight: 700; margin-top: var(--space-xs);">
+                🎬 {{ result.filename }}
+            </h1>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                Analyzed {{ result.created_at|timesince }} ago
+            </span>
+        </div>
+        <a href="{% url 'detector:upload' %}" class="analyze-btn" style="text-decoration: none;">
+            <span class="btn-text">+ New Analysis</span>
+        </a>
+    </div>
+</section>
+
+<!-- Results -->
+<section class="results-section" id="results">
+    <div class="results-grid">
+        <!-- Verdict Banner -->
+        <div class="verdict-banner {% if result.verdict == 'AUTHENTIC' %}authentic{% else %}manipulated{% endif %}">
+            <div class="verdict-icon">
+                {% if result.verdict == 'AUTHENTIC' %}✓{% else %}✗{% endif %}
+            </div>
+            <div>
+                <div class="verdict-label">Verdict</div>
+                <div class="verdict-text">{{ result.verdict }}</div>
+            </div>
+            {% if result.processing_time %}
+            <div style="margin-left: auto;">
+                <span class="processing-badge">⚡ {{ result.processing_time }}s</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Deepfake Probability -->
+        <div class="glass-card metric-card">
+            <div class="metric-label">Deepfake Probability</div>
+            <div class="metric-value probability" data-target="{{ result.deepfake_probability }}">
+                {{ result.deepfake_probability }}<span class="metric-suffix">%</span>
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill probability" style="width: {{ result.deepfake_probability }}%;"></div>
+            </div>
+        </div>
+
+        <!-- Reconstruction Error -->
+        <div class="glass-card metric-card">
+            <div class="metric-label">Reconstruction Error (MSE)</div>
+            <div class="metric-value error">{{ result.reconstruction_error }}</div>
+            {% if result.is_anomaly %}
+            <div class="anomaly-tag detected">⚠ Zero-Day Anomaly Detected</div>
+            {% else %}
+            <div class="anomaly-tag normal">✓ Within Normal Bounds</div>
+            {% endif %}
+        </div>
+
+        <!-- Explanation -->
+        <div class="glass-card explanation-card">
+            <div class="card-header">
+                <span class="icon">🧠</span>
+                <h2>Analysis Explanation</h2>
+            </div>
+            <div class="card-body">
+                <p class="explanation-text">{{ result.explanation }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frame Strip with Heatmaps -->
+    {% if frame_data %}
+    <div class="frames-section glass-card">
+        <div class="card-header">
+            <span class="icon">🔬</span>
+            <h2>Temporal Sequence Analysis (8 Frames)</h2>
+        </div>
+        <div class="card-body">
+            <div class="frame-toggle-group">
+                <button type="button" class="frame-toggle active" data-view="crops">Face Crops</button>
+                <button type="button" class="frame-toggle" data-view="heatmaps">Error Heatmaps</button>
+            </div>
+
+            <!-- Face Crops -->
+            <div class="frame-grid frame-view" id="view-crops">
+                {% for crop, heatmap in frame_data %}
+                <div class="frame-item">
+                    <img src="data:image/jpeg;base64,{{ crop }}" alt="Face crop frame {{ forloop.counter }}">
+                    <div class="frame-label">Frame {{ forloop.counter }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Heatmaps -->
+            <div class="frame-grid frame-view" id="view-heatmaps" style="display: none;">
+                {% for crop, heatmap in frame_data %}
+                <div class="frame-item">
+                    <img src="data:image/png;base64,{{ heatmap }}" alt="Heatmap frame {{ forloop.counter }}">
+                    <div class="frame-label">Frame {{ forloop.counter }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Frame toggle (reused from app.js pattern)
+document.addEventListener('DOMContentLoaded', () => {
+    const toggles = document.querySelectorAll('.frame-toggle');
+    toggles.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const view = btn.dataset.view;
+            toggles.forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.frame-view').forEach(v => v.style.display = 'none');
+            const target = document.getElementById(`view-${view}`);
+            if (target) target.style.display = 'grid';
+        });
+    });
+
+    // Animate metric bars
+    const bars = document.querySelectorAll('.metric-bar-fill');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.transition = 'width 1.2s cubic-bezier(0.4, 0, 0.2, 1)';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.3 });
+    bars.forEach(bar => observer.observe(bar));
+});
+</script>
+{% endblock %}
