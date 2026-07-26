@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}DeepGuard — Upload &amp; Detect{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        Two-Stream Spatio-Temporal + Frequency Analysis
+    </div>
+    <h1>
+        Detect <span class="gradient-text">Deepfakes</span><br>
+        with Forensic Precision
+    </h1>
+    <p>
+        Upload a video and our AI ensemble — combining spatial-temporal pattern recognition
+        with DCT frequency analysis — reveals manipulation artifacts invisible to the human eye.
+    </p>
+</section>
+
+<!-- Error Banner -->
+{% if error %}
+<div class="error-banner">
+    <span class="error-icon">⚠️</span>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<!-- Upload Card -->
+<form method="post" enctype="multipart/form-data" id="upload-form">
+    {% csrf_token %}
+    <div class="glass-card">
+        <div class="card-header">
+            <span class="icon">📤</span>
+            <h2>Upload Video for Analysis</h2>
+        </div>
+        <div class="card-body">
+            <!-- Drop Zone -->
+            <div class="upload-zone" id="drop-zone">
+                <span class="upload-icon">🎬</span>
+                <h3>Drag &amp; drop your video here</h3>
+                <p>or click to browse — supports .mp4, .avi, .mov, .mkv (max 100 MB)</p>
+                <span class="browse-btn">Browse Files</span>
+                <input type="file" name="video" id="video-input" accept=".mp4,.avi,.mov,.mkv" style="display: none;">
+            </div>
+
+            <!-- File Preview -->
+            <div class="file-preview" id="file-preview">
+                <span class="file-icon">🎥</span>
+                <div class="file-info">
+                    <div class="file-name" id="file-name">—</div>
+                    <div class="file-size" id="file-size">—</div>
+                </div>
+                <button type="button" class="remove-file" id="remove-file" title="Remove file">✕</button>
+            </div>
+
+            <!-- Config + Submit -->
+            <div class="config-section">
+                <div class="threshold-control">
+                    <label for="threshold-slider">Anomaly Threshold (MSE):</label>
+                    <input type="range" id="threshold-slider" min="0.01" max="0.50" step="0.01" value="0.15">
+                    <span class="threshold-value" id="threshold-display">0.15</span>
+                    <input type="hidden" name="threshold" id="threshold-hidden" value="0.15">
+                </div>
+                <button type="submit" class="analyze-btn" id="analyze-btn" disabled>
+                    <span class="spinner"></span>
+                    <span class="btn-text">🔍 Analyze Video</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-pulse">🛡️</div>
+        <div class="loading-text">Analyzing Video...</div>
+        <div class="loading-subtext">This may take 15–60 seconds depending on video length</div>
+        <div class="loading-steps">
+            <div class="loading-step active" id="step-1">
+                <span class="step-dot"></span>
+                Extracting face regions with YOLOv8
+            </div>
+            <div class="loading-step" id="step-2">
+                <span class="step-dot"></span>
+                Computing DCT frequency features
+            </div>
+            <div class="loading-step" id="step-3">
+                <span class="step-dot"></span>
+                Running two-stream classifier (ONNX)
+            </div>
+            <div class="loading-step" id="step-4">
+                <span class="step-dot"></span>
+                Generating anomaly heatmaps
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% if result %}
+<!-- ============ RESULTS ============ -->
+<section class="results-section" id="results">
+    <div class="results-grid">
+        <!-- Verdict Banner -->
+        <div class="verdict-banner {% if result.verdict == 'AUTHENTIC' %}authentic{% else %}manipulated{% endif %}">
+            <div class="verdict-icon">
+                {% if result.verdict == 'AUTHENTIC' %}✓{% else %}✗{% endif %}
+            </div>
+            <div>
+                <div class="verdict-label">Verdict</div>
+                <div class="verdict-text">{{ result.verdict }}</div>
+            </div>
+            {% if result.processing_time %}
+            <div style="margin-left: auto;">
+                <span class="processing-badge">⚡ {{ result.processing_time }}s</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Deepfake Probability -->
+        <div class="glass-card metric-card">
+            <div class="metric-label">Deepfake Probability</div>
+            <div class="metric-value probability" data-target="{{ result.deepfake_probability }}">
+                {{ result.deepfake_probability }}<span class="metric-suffix">%</span>
+            </div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill probability" style="width: {{ result.deepfake_probability }}%;"></div>
+            </div>
+        </div>
+
+        <!-- Reconstruction Error -->
+        <div class="glass-card metric-card">
+            <div class="metric-label">Reconstruction Error (MSE)</div>
+            <div class="metric-value error">{{ result.reconstruction_error }}</div>
+            {% if result.is_anomaly %}
+            <div class="anomaly-tag detected">⚠ Zero-Day Anomaly Detected</div>
+            {% else %}
+            <div class="anomaly-tag normal">✓ Within Normal Bounds</div>
+            {% endif %}
+        </div>
+
+        <!-- Explanation -->
+        <div class="glass-card explanation-card">
+            <div class="card-header">
+                <span class="icon">🧠</span>
+                <h2>Analysis Explanation</h2>
+            </div>
+            <div class="card-body">
+                <p class="explanation-text">{{ result.explanation }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frame Strip with Heatmaps -->
+    {% if frame_data %}
+    <div class="frames-section glass-card">
+        <div class="card-header">
+            <span class="icon">🔬</span>
+            <h2>Temporal Sequence Analysis (8 Frames)</h2>
+        </div>
+        <div class="card-body">
+            <div class="frame-toggle-group">
+                <button type="button" class="frame-toggle active" data-view="crops">Face Crops</button>
+                <button type="button" class="frame-toggle" data-view="heatmaps">Error Heatmaps</button>
+                <button type="button" class="frame-toggle" data-view="overlays">Overlay</button>
+            </div>
+
+            <!-- Face Crops -->
+            <div class="frame-grid frame-view" id="view-crops">
+                {% for crop, heatmap, overlay in frame_data %}
+                <div class="frame-item">
+                    <img src="data:image/jpeg;base64,{{ crop }}" alt="Face crop frame {{ forloop.counter }}">
+                    <div class="frame-label">Frame {{ forloop.counter }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Heatmaps -->
+            <div class="frame-grid frame-view" id="view-heatmaps" style="display: none;">
+                {% for crop, heatmap, overlay in frame_data %}
+                <div class="frame-item">
+                    <img src="data:image/png;base64,{{ heatmap }}" alt="Heatmap frame {{ forloop.counter }}">
+                    <div class="frame-label">Frame {{ forloop.counter }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Overlays -->
+            <div class="frame-grid frame-view" id="view-overlays" style="display: none;">
+                {% for crop, heatmap, overlay in frame_data %}
+                <div class="frame-item">
+                    <img src="data:image/jpeg;base64,{{ overlay }}" alt="Overlay frame {{ forloop.counter }}">
+                    <div class="frame-label">Frame {{ forloop.counter }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+
+<!-- API Docs Section -->
+<section id="api-docs" style="margin-top: var(--space-2xl);">
+    <div class="glass-card">
+        <div class="card-header">
+            <span class="icon">⚡</span>
+            <h2>REST API</h2>
+            <span class="nav-badge" style="margin-left: 8px;">POST</span>
+        </div>
+        <div class="card-body">
+            <div class="metric-label" style="margin-bottom: var(--space-sm);">Endpoint</div>
+            <code style="font-family: var(--font-mono); color: var(--accent-cyan); font-size: 0.9rem; background: rgba(6, 214, 160, 0.06); padding: 8px 14px; border-radius: 6px; display: inline-block; border: 1px solid rgba(6, 214, 160, 0.15);">
+                POST /api/detect/
+            </code>
+            <div style="margin-top: var(--space-lg);">
+                <div class="metric-label" style="margin-bottom: var(--space-sm);">Example (cURL)</div>
+                <pre style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.3); padding: var(--space-md); border-radius: var(--radius-sm); overflow-x: auto; border: 1px solid var(--border-subtle); line-height: 1.7;">curl -X POST -F "video=@suspect_video.mp4" -F "threshold=0.15" \
+     http://localhost:8000/api/detect/</pre>
+            </div>
+            <div style="margin-top: var(--space-lg);">
+                <div class="metric-label" style="margin-bottom: var(--space-sm);">Response</div>
+                <pre style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.3); padding: var(--space-md); border-radius: var(--radius-sm); overflow-x: auto; border: 1px solid var(--border-subtle); line-height: 1.7;">{
+    "id": 1,
+    "filename": "suspect_video.mp4",
+    "deepfake_probability": 87.32,
+    "reconstruction_error": 0.2341,
+    "is_anomaly": true,
+    "verdict": "MANIPULATED",
+    "explanation": "The two-stream classifier detected ...",
+    "processing_time_seconds": 4.21,
+    "created_at": "2026-07-25T15:00:00Z"
+}</pre>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/app.js' %}"></script>
+{% endblock %}

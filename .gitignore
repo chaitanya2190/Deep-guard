@@ -1,0 +1,47 @@
+# Model weights & binaries
+*.pth
+*.pt
+*.onnx
+*.bin
+*.h5
+*.pkl
+
+# Model output directories
+output/
+output_timesformer/
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# Misc
+*.log

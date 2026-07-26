@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="DeepGuard — AI-powered deepfake detection. Upload a video and get instant forensic analysis with manipulation heatmaps.">
+    <title>{% block title %}DeepGuard — Deepfake Detection{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <nav class="navbar">
+            <div class="container">
+                <a href="{% url 'detector:upload' %}" class="nav-brand">
+                    <span class="shield-icon">🛡️</span>
+                    DeepGuard
+                </a>
+                <ul class="nav-links">
+                    <li><a href="{% url 'detector:upload' %}" class="{% if request.resolver_match.url_name == 'upload' %}active{% endif %}">Detect</a></li>
+                    <li><a href="{% url 'detector:history' %}" class="{% if request.resolver_match.url_name == 'history' %}active{% endif %}">History</a></li>
+                    <li>
+                        <a href="{% url 'detector:upload' %}#api-docs">
+                            API <span class="nav-badge">REST</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="container">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container">
+                <span class="footer-text">DeepGuard &copy; 2026 — Two-Stream Deepfake Forensics</span>
+                <div class="footer-tech">
+                    <span class="tech-badge">Django</span>
+                    <span class="tech-badge">ONNX Runtime</span>
+                    <span class="tech-badge">PyTorch</span>
+                    <span class="tech-badge">OpenCV</span>
+                    <span class="tech-badge">YOLOv8</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

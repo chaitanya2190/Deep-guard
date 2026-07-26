@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}DeepGuard — Analysis History{% endblock %}
+
+{% block content %}
+<div class="history-header">
+    <div>
+        <h1>Analysis History</h1>
+        <span class="history-count">{{ page_obj.paginator.count }} total analyses</span>
+    </div>
+    <a href="{% url 'detector:upload' %}" class="analyze-btn" style="text-decoration: none;">
+        <span class="btn-text">+ New Analysis</span>
+    </a>
+</div>
+
+{% if page_obj.object_list %}
+<div class="history-grid">
+    {% for item in page_obj %}
+    <a href="{% url 'detector:result_detail' item.pk %}" class="history-card glass-card">
+        <div class="card-body">
+            <div class="history-card-top">
+                <span class="history-filename">{{ item.filename }}</span>
+                <span class="history-verdict-badge {% if item.verdict == 'AUTHENTIC' %}authentic{% else %}manipulated{% endif %}">
+                    {{ item.verdict }}
+                </span>
+            </div>
+            <div class="history-stats">
+                <div>
+                    <div class="history-stat-label">Probability</div>
+                    <div class="history-stat-value">{{ item.deepfake_probability }}%</div>
+                </div>
+                <div>
+                    <div class="history-stat-label">MSE</div>
+                    <div class="history-stat-value">{{ item.reconstruction_error }}</div>
+                </div>
+                {% if item.is_anomaly %}
+                <div>
+                    <div class="history-stat-label">Anomaly</div>
+                    <div class="history-stat-value" style="color: var(--accent-red);">⚠ Yes</div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="history-meta">
+                <span>{{ item.created_at|timesince }} ago</span>
+                {% if item.processing_time %}
+                <span>⚡ {{ item.processing_time }}s</span>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="pagination">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">← Prev</a>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <span class="current">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Next →</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="glass-card">
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>No analyses yet</h3>
+        <p>Upload your first video to get started. <a href="{% url 'detector:upload' %}">Go to detection →</a></p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
